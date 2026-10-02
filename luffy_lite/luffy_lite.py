@@ -75,6 +75,7 @@ def parse_vless_header(data: bytes):
 async def vless_ws(ws: WebSocket, tag: str):
     await ws.accept()
     writer = None
+    disconnected = False
     try:
         first = await ws.receive_bytes()
         parsed = parse_vless_header(first)
@@ -108,15 +109,21 @@ async def vless_ws(ws: WebSocket, tag: str):
         await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         for t in tasks:
             t.cancel()
-    except (WebSocketDisconnect, Exception):
+    except WebSocketDisconnect:
+        logging.exception("Unexpected error")
+        disconnected = True
+    except Exception:
         logging.exception("Unexpected error")
     finally:
         if writer:
             writer.close()
-        try:
-            await ws.close()
-        except Exception:
-            logging.exception("Unexpected error")
+        if not disconnected:
+            try:
+                await ws.close()
+            except WebSocketDisconnect:
+                logging.exception("Unexpected error")
+            except Exception:
+                logging.exception("Unexpected error")
 
 
 # ---------------- ساخت لینک ----------------
@@ -134,8 +141,10 @@ def _endpoint(raw_host: str) -> tuple[str, bool]:
             logging.exception(f"Error: {e}")
             host = "localhost"
     host = host.lower()
-    if host.startswith("3000-"):
-        host = f"8000-{host[len('3000-') :]}"
+    if host.endswith(".build.reflexsandbox.com") and host.startswith(
+        ("3000-", "8080-")
+    ):
+        host = f"8000-{host.split('-', 1)[1]}"
     return host, host in ("localhost", "127.0.0.1", "::1")
 
 
