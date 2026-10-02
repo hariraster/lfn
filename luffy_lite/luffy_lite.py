@@ -7,6 +7,7 @@ from urllib.parse import quote, urlencode, urlsplit
 
 import reflex as rx
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from starlette.websockets import WebSocketState
 
 # ---------------- تنظیمات ----------------
 NAME = os.getenv("VLESS_NAME", "Luffy")  # اسم لینک (بعد از #) و انتهای path
@@ -80,7 +81,6 @@ async def vless_ws(ws: WebSocket, tag: str):
         first = await ws.receive_bytes()
         parsed = parse_vless_header(first)
         if not parsed:
-            await ws.close()
             return
         version, host, port, payload = parsed
         reader, writer = await asyncio.open_connection(host, port)
@@ -117,10 +117,12 @@ async def vless_ws(ws: WebSocket, tag: str):
     finally:
         if writer:
             writer.close()
-        if not disconnected:
+        if (not disconnected) & (
+            ws.application_state != WebSocketState.DISCONNECTED
+        ):
             try:
                 await ws.close()
-            except WebSocketDisconnect:
+            except RuntimeError:
                 logging.exception("Unexpected error")
             except Exception:
                 logging.exception("Unexpected error")
