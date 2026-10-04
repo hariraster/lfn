@@ -109,8 +109,10 @@ async def vless_ws(ws: WebSocket, tag: str):
         await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         for t in tasks:
             t.cancel()
-    except WebSocketDisconnect:
-        logging.exception("Unexpected error")
+    except WebSocketDisconnect as exc:
+        if exc.code not in (1000, 1001, 1005):
+            logging.exception("Unexpected error")
+        logging.debug("WebSocket client disconnected")
         disconnected = True
     except Exception:
         logging.exception("Unexpected error")
@@ -122,8 +124,22 @@ async def vless_ws(ws: WebSocket, tag: str):
         ):
             try:
                 await ws.close()
-            except RuntimeError:
-                logging.exception("Unexpected error")
+            except RuntimeError as exc:
+                message = str(exc).lower()
+                if not any(
+                    marker in message
+                    for marker in (
+                        "already closed",
+                        "already sent",
+                        "close message has been sent",
+                        "after sending 'websocket.close'",
+                        "after sending a close message",
+                        "once a close message has been sent",
+                        "response already completed",
+                    )
+                ):
+                    logging.exception("Unexpected error")
+                logging.debug("WebSocket already closed")
             except Exception:
                 logging.exception("Unexpected error")
 
