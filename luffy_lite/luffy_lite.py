@@ -12,8 +12,8 @@ from starlette.websockets import WebSocketState
 # ---------------- تنظیمات ----------------
 NAME = os.getenv("VLESS_NAME", "Luffy")  # اسم لینک (بعد از #) و انتهای path
 HOST_OVERRIDE = os.getenv(
-    "VLESS_HOST", ""
-)  # اگر خالی باشد، از دامنه‌ی خود صفحه خوانده می‌شود
+    "VLESS_HOST", "5cb9493e-8e90-4bf7-8602-611476a80a71.fly.dev"
+)  # متغیر محیطی می‌تواند میزبان پیش‌فرض بک‌اند را جایگزین کند
 UUID_FILE = Path(__file__).parent / "uuid.txt"
 
 
